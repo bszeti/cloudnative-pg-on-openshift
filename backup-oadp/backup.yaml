@@ -1,0 +1,36 @@
+apiVersion: velero.io/v1
+kind: Backup
+metadata:
+  # name: test-postgres-backup
+  generateName: test-
+spec:
+  defaultVolumesToFsBackup: false
+  csiSnapshotTimeout: 5m0s
+  ttl: 24h0m0s
+  itemOperationTimeout: 4h0m0s
+  storageLocation: cloudnative-pg-oadp
+  hooks:
+    resources:
+      - includedNamespaces:
+          - postgres
+        name: backup-start
+        pre:
+          - exec:
+              command:
+                - /bin/bash
+                - '-c'
+                - |
+                  date +%T
+                  echo pre-hook-log-start $(hostname)
+                  psql -U postgres -c "SELECT pg_backup_start('oadp', true); SELECT pg_sleep(120); SELECT pg_backup_stop();" >/dev/null 2>&1 &
+                  date +%T
+                  echo pre-hook-log-end $(hostname)
+              container: postgres
+              timeout: 60s
+  includedNamespaces:
+    - postgres
+  orderedResources:
+    pods: 'postgres/pg-2,postgres/pg-1'
+  # excludedResources:
+  #   - secrets
+  snapshotMoveData: false

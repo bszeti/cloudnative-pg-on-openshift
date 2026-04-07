@@ -1,0 +1,47 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg
+spec:
+  instances: 2
+  template:
+      spec:
+        containers:
+          - name: postgres
+
+  enablePDB: false
+
+  bootstrap:
+    initdb:
+      database: db1
+      owner: myuser
+      secret:
+        name: user-myuser
+
+  enableSuperuserAccess: true
+  superuserSecret:
+    name: user-admin
+
+  storage:
+    size: 10Gi
+    
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 1Gi
+  managed:
+    services:
+      additional:
+        # Setting up a nodeport for easy access outside the cluster 
+      - selectorType: rw
+        serviceTemplate:
+          metadata:
+            name: rw-nodeport
+          spec:
+            ports:
+            - nodePort: 30432
+              port: 5432
+            type: NodePort
