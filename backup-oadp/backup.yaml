@@ -1,12 +1,16 @@
 apiVersion: velero.io/v1
 kind: Backup
 metadata:
-  # name: test-postgres-backup
+  # Backups need unique name
   generateName: test-
 spec:
   defaultVolumesToFsBackup: false
-  csiSnapshotTimeout: 5m0s
+  snapshotMoveData: false
+  # The CSI snapshot should be quicker than the pg_sleep() period for pg_backup_start()
+  csiSnapshotTimeout: 2m0s
+  # Retention period for backup - Afterwards it's removed from OpenShift and Object Storage too.
   ttl: 24h0m0s
+  # Async volume upload timeout
   itemOperationTimeout: 4h0m0s
   storageLocation: cloudnative-pg-oadp
   hooks:
@@ -22,7 +26,9 @@ spec:
                 - |
                   date +%T
                   echo pre-hook-log-start $(hostname)
-                  psql -U postgres -c "SELECT pg_backup_start('oadp', true); SELECT pg_sleep(120); SELECT pg_backup_stop();" >/dev/null 2>&1 &
+                  # Sending stdout/err to /dev/null is required to avoid blocking the hook
+                  psql -U postgres -c "SELECT pg_backup_start('oadp', true); SELECT pg_sleep(180); SELECT pg_backup_stop();" >/dev/null 2>&1 &
+                  sleep 2 # Give some time for pg_backup_start()
                   date +%T
                   echo pre-hook-log-end $(hostname)
               container: postgres
@@ -30,7 +36,12 @@ spec:
   includedNamespaces:
     - postgres
   orderedResources:
-    pods: 'postgres/pg-2,postgres/pg-1'
+    # We want to make sure that the snapshot of the replica is older than the snapshot from the primary, otherwise we'll get timeline issues after restore
+    # So the order of snapshoting Pods should be "replica,primary". Their role changes based on availability, instead of names only labels can tell the current role.
+    # Also it seems that as long as both pods are listed under "orderedResources" Velero runs the pre-hook on both first before taking the snapshots, which guarantees consistency no matter the order.
+    # TODO: Needs testing
+    pods: 'postgres/pg-1,postgres/pg-2'
+  # May not want to backup secrets if they are stored somewhere else and created by External Secrets Operator for example
   # excludedResources:
   #   - secrets
-  snapshotMoveData: false
+  
