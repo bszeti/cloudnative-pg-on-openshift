@@ -29,6 +29,9 @@ spec:
       enable: true
       uploaderType: kopia
     velero:
+      args:
+        # Default Backup garbage collection is 1h in nano - set 5 mins here for testing
+        garbage-collection-frequency: 300000000000
       defaultPlugins:
         - openshift
         - gcp

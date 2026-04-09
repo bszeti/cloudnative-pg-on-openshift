@@ -8,8 +8,9 @@ spec:
   snapshotMoveData: false
   # The CSI snapshot should be quicker than the pg_sleep() period for pg_backup_start()
   csiSnapshotTimeout: 2m0s
-  # Retention period for backup - Afterwards it's removed from OpenShift and Object Storage too.
+  # Retention period for backup - Afterwards it's removed from OpenShift, Object Storage with related snapshots too.
   ttl: 24h0m0s
+  # ttl: 0h15m0s
   # Async volume upload timeout
   itemOperationTimeout: 4h0m0s
   storageLocation: cloudnative-pg-oadp
@@ -39,7 +40,6 @@ spec:
     # We want to make sure that the snapshot of the replica is older than the snapshot from the primary, otherwise we'll get timeline issues after restore
     # So the order of snapshoting Pods should be "replica,primary". Their role changes based on availability, instead of names only labels can tell the current role.
     # Also it seems that as long as both pods are listed under "orderedResources" Velero runs the pre-hook on both first before taking the snapshots, which guarantees consistency no matter the order.
-    # TODO: Needs testing
     pods: 'postgres/pg-1,postgres/pg-2'
   # May not want to backup secrets if they are stored somewhere else and created by External Secrets Operator for example
   # excludedResources:

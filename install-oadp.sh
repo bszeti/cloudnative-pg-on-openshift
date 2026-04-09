@@ -1,5 +1,6 @@
 OPERATOR_OADP_NAMESPACE=openshift-adp
 NAMESPACE=postgres
+RESTORE_NAMESPACE=postgres-restore
 
 # Install operator
 oc apply -n $OPERATOR_OADP_NAMESPACE -f backup-oadp/subscription.yaml
@@ -21,22 +22,23 @@ oc create -n $OPERATOR_OADP_NAMESPACE -f backup-oadp/backup.yaml
 # Backups must be deleted in Object Storage, not in OpenShift, otherwise the operator recreates them
 
 # Run restore
-oc delete project $NAMESPACE
+oc delete project $RESTORE_NAMESPACE
 oc delete -n $OPERATOR_OADP_NAMESPACE -f backup-oadp/restore.yaml
+# Restores are removed when the related Backup expires
 oc create -n $OPERATOR_OADP_NAMESPACE -f backup-oadp/restore.yaml
 # Wait for namespace and pods
-until oc get namespace $NAMESPACE && oc get -n $NAMESPACE pod/pg-1 && oc get -n $NAMESPACE pod/pg-2; do
+until oc get namespace $RESTORE_NAMESPACE && oc get -n $RESTORE_NAMESPACE pod/pg-1 && oc get -n $RESTORE_NAMESPACE pod/pg-2; do
     sleep 1
 done
-oc wait -n $NAMESPACE --for=condition=Ready pod/pg-1
-oc wait -n $NAMESPACE --for=condition=Ready pod/pg-2
+oc wait -n $RESTORE_NAMESPACE --for=condition=Ready pod/pg-1
+oc wait -n $RESTORE_NAMESPACE --for=condition=Ready pod/pg-2
 
-# Delete VolumeSnapshots afterwards, because otherwise they are included in next backup, which is confusing
-oc delete -n $NAMESPACE volumesnapshots --all
-
-# VolumeSnapshotContents will still stay, because Velero sets "deletionPolicy: Retain ", but their name matches the VolumeSnapshots
-vsclist=$(oc get -n $NAMESPACE -oname volumesnapshots)
-for vsc in $vsclist; do
+# Delete VolumeSnapshots afterwards, because otherwise they are included in next backup, which causes problems!
+# VolumeSnapshotContents will still stay, because Velero sets "deletionPolicy: Retain"
+# It's also safe to delete both. The backend snapshot is still not removed until the Backup expires.
+oc get -n $RESTORE_NAMESPACE volumesnapshot && oc get volumesnapshotcontents
+vsclist=$(oc get -n $RESTORE_NAMESPACE -oname volumesnapshots)
+for vsc in $vsclist; do # NOTE: Needs ${=vsclist} in zsh
+  oc delete -n $NAMESPACE VolumeSnapshot $(basename $vsc)
   oc delete VolumeSnapshotContent $(basename $vsc)
 done
-# The backend snapshot is still NOT removed! That needs a backend specific retention process or policy

@@ -1,0 +1,19 @@
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: test-vsnhg-with-mapping
+  namespace: openshift-adp
+spec:
+  backupName: test-vsnhg
+  includedNamespaces:
+    - postgres
+  # If we want to restore in a different namespace
+  namespaceMapping:
+    postgres: postgres-restore 
+  # It's better to let the cloudnative-pg operator recreate the Pods in the right order
+  excludedResources:
+    - pods
+  restorePVs: true
+  # Enforce patching the existing resources instead of skipping
+  # existingResourcePolicy: update
+  itemOperationTimeout: 4h0m0s

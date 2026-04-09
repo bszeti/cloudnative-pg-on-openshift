@@ -21,7 +21,6 @@ oc exec -n $NAMESPACE pg-1 -- /bin/bash -c 'psql -U postgres db1 -c "
           created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
           message VARCHAR(1000)
         );"'
-
 oc exec -n $NAMESPACE pg-1 -- /bin/bash -c 'psql -U postgres db1 -c "INSERT INTO messages (message) VALUES ('\''hello1'\'');"'
 oc exec -n $NAMESPACE pg-1 -- /bin/bash -c 'psql -U postgres db1 -c "select * from messages;"'
 
