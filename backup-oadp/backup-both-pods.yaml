@@ -37,10 +37,9 @@ spec:
   includedNamespaces:
     - postgres
   orderedResources:
-    # We want to make sure that the snapshot of the replica is older than the snapshot from the primary, otherwise we'll get timeline issues after restore
+    # We want to make sure that the snapshot of the replica is older than the snapshot from the primary, otherwise we'll get timeline issues after restore - "Refusing to restore future timeline history file"
     # So the order of snapshoting Pods should be "replica,primary". Their role changes based on availability, instead of names only labels can tell the current role.
-    # Also it seems that as long as both pods are listed under "orderedResources" Velero runs the pre-hook on both first before taking the snapshots, which guarantees consistency no matter the order.
-    pods: 'postgres/pg-1,postgres/pg-2'
+    pods: 'postgres/pg-2,postgres/pg-1'
   # May not want to backup secrets if they are stored somewhere else and created by External Secrets Operator for example
   # excludedResources:
   #   - secrets
