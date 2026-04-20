@@ -23,25 +23,25 @@ spec:
     name: user-admin
 
   storage:
-    size: 10Gi
+    size: 100Gi
     
   resources:
     limits:
-      cpu: 1
-      memory: 1Gi
+      cpu: 4
+      memory: 4Gi
     requests:
       cpu: 100m
-      memory: 1Gi
-  managed:
-    services:
-      additional:
-        # Setting up a nodeport for easy access outside the cluster 
-      - selectorType: rw
-        serviceTemplate:
-          metadata:
-            name: rw-nodeport
-          spec:
-            ports:
-            - nodePort: 30432
-              port: 5432
-            type: NodePort
+      memory: 4Gi
+  # Setting up a nodeport for easy access outside the cluster 
+  # managed:
+  #   services:
+  #     additional:
+  #     - selectorType: rw
+  #       serviceTemplate:
+  #         metadata:
+  #           name: rw-nodeport
+  #         spec:
+  #           ports:
+  #           - nodePort: 30432
+  #             port: 5432
+  #           type: NodePort

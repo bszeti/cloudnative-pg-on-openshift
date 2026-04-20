@@ -23,8 +23,8 @@ spec:
               python postgres-insert.py
           env:
             - name: DB_HOST
-              # value: pg-rw.postgres.svc
-              value: pg-rw.postgres-restore.svc
+              value: pg-rw.postgres.svc
+              # value: pg-rw.postgres-restore.svc
             - name: DB_PORT
               value: "5432"
             - name: DB_USERNAME

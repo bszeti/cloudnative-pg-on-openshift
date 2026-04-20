@@ -1,10 +1,10 @@
 apiVersion: velero.io/v1
 kind: Restore
 metadata:
-  name: test-fr7vs-with-mapping
+  name: large-j496s
   namespace: openshift-adp
 spec:
-  backupName: test-fr7vs
+  backupName: large-j496s
   includedNamespaces:
     - postgres
   # If we want to restore in a different namespace

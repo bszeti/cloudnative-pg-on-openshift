@@ -28,12 +28,12 @@ spec:
                   date +%T
                   echo pre-hook-log-start $(hostname)
                   # Sending stdout/err to /dev/null is required to avoid blocking the hook
-                  psql -U postgres -c "SELECT pg_backup_start('oadp', true); SELECT pg_sleep(180); SELECT pg_backup_stop();" >/dev/null 2>&1 &
+                  psql -U postgres -c "SELECT pg_backup_start('oadp', true); SELECT pg_sleep(60); SELECT pg_backup_stop();" >/dev/null 2>&1 &
                   sleep 2 # Give some time for pg_backup_start()
                   date +%T
                   echo pre-hook-log-end $(hostname)
               container: postgres
-              timeout: 60s
+              timeout: 20s
   includedNamespaces:
     - postgres
   orderedResources:

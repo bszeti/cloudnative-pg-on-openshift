@@ -1,0 +1,81 @@
+# Kubernetes Job to load several GB of data into a PostgreSQL database
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-data
+spec:
+  # Don't retry new Pod on failure
+  backoffLimit: 0
+  activeDeadlineSeconds: 14400 # Job deadline 4 hours
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: main
+          image: ghcr.io/cloudnative-pg/postgresql:18
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -eu
+              export PGPASSWORD="${DB_PASSWORD}"
+              DB_PORT="${DB_PORT:-5432}"
+              run_psql() {
+                time psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USERNAME}" -d "${DB_NAME}" -v ON_ERROR_STOP=1 "$@"
+              }
+
+              run_psql <<'EOSQL'
+               CREATE TABLE IF NOT EXISTS data (
+                  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                  filler1 CHAR(255),
+                  filler2 CHAR(255),
+                  filler3 CHAR(255),
+                  filler4 CHAR(255)
+              );
+              EOSQL
+
+              for i in $(seq 1 "${DATA_SIZE_GB}"); do
+                echo "Loading data bunch $i"
+                run_psql <<'EOSQL'
+                BEGIN;
+                -- Session-local tuning for bulk insert (single transaction)
+                SET LOCAL synchronous_commit = OFF;
+
+                INSERT INTO data (filler1, filler2, filler3, filler4)
+                WITH RECURSIVE
+                cte1 AS (
+                    SELECT 1 AS n
+                    UNION ALL
+                    SELECT n + 1 FROM cte1 WHERE n < 1000
+                )
+                SELECT REPEAT('A', 255), REPEAT('B', 255), REPEAT('C', 255), REPEAT('D', 255)
+                FROM cte1
+                CROSS JOIN (SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5) AS t1 (x)
+                CROSS JOIN (SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5) AS t2 (x)
+                CROSS JOIN (SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5) AS t3 (x)
+                CROSS JOIN (
+                    SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5
+                    UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8
+                ) AS t4 (x)
+                ;
+                COMMIT;
+
+                SELECT COUNT(*) AS row_count FROM data;
+                SELECT current_database() AS database,
+                       pg_size_pretty(pg_total_relation_size('public.data'::regclass)) AS table_size
+              EOSQL
+              done
+
+          env:
+            - name: DB_HOST
+              value: pg-rw.postgres.svc
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USERNAME
+              value: myuser
+            - name: DB_PASSWORD
+              value: mysecret
+            - name: DB_NAME
+              value: db1
+            - name: DATA_SIZE_GB
+              value: "25"
