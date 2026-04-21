@@ -46,8 +46,6 @@ for vsc in $vsclist; do # NOTE: Needs ${=vsclist} in zsh
   oc delete -n $NAMESPACE VolumeSnapshot $(basename $vsc)
   oc delete VolumeSnapshotContent $(basename $vsc)
 done
-oc delete -n RESTORE_NAMESPACE volumesnapshot --all
-oc delete volumesnapshotcontents --all
 
 # Check restore
 primary_restored_pod=$(oc get -n $RESTORE_NAMESPACE -oname pod --selector='role=primary')

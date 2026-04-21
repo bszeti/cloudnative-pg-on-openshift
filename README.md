@@ -33,8 +33,10 @@ There are too `Backup` examples here:
 
 With the tested [OADP version](https://github.com/openshift/oadp-operator#velero-version-relationship) (`v1.5` on OpenShift `v4.21`) we noticed that the restored `VolumeSnapshot` resources are kept in the namespace after the related `PersistentVolumes` are restored. This is confusing when we're trying to make backups again of the restored namespace, and it's recommended to be deleted once we verified that the restore was successful (e.g. the Pods reached `Ready`). Deleting the `VolumeSnapshot` won't remove the actual snapshot in the backend, those are only removed when the `Backup` expires.
 
+See [restore.yaml](backup-oadp/restore.yaml) how to restore an existing `Backup`. Set `namespaceMapping` to restore in another namespace.
+
 Notes and Known Issues:
-- A backup pre-hook is required to run `pg_backup_start()` before taking a snapshot to guarantee database level file consistency.
+- A backup pre-hook is required to run `pg_backup_start()` before taking a snapshot to guarantee database level file consistency. This `psql` session must be running after the hook is completed, otherwise the backup status will be aborted. In this example we assume 60sec is enough for the CSI driver to create a snapshot before calling `pg_backup_stop()`. The apps can still use the database during this timeframe.
 - The backup pre-hook running `pg_backup_start()` must be put in background, which results a zombie process in the Pod.
 - Deleting the backups manually (in Object Storage) doesn't remove the related snapshots - as that info was stored there. Meanwhile it's done properly when the `Backup` expires (checked every 1 hour by default).
 - The `VolumeSnapshots` (and related `VolumeSnapshotContents`) are left in the namespace after Restore. Delete them before taking a next Backup, otherwise they start piling up.
